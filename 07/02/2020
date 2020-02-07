@@ -1,0 +1,80 @@
+```Powershell
+#Crear Unidades Organizativas:
+New-ADOrganizationalUnit -Name "Grado_Medio"              -ProtectedFromAccidentalDeletion $false -Path "DC=Andel,DC=local"
+New-ADOrganizationalUnit -Name "Grado_Superior"           -ProtectedFromAccidentalDeletion $false -Path "DC=Andel,DC=local"
+New-ADOrganizationalUnit -Name "Usuarios_Deshabilitados"  -ProtectedFromAccidentalDeletion $false -Path "DC=Andel,DC=local"
+
+New-ADOrganizationalUnit -Name "SMIR"  -ProtectedFromAccidentalDeletion $false -Path "OU=Grado_Medio,DC=Andel,DC=local"
+New-ADOrganizationalUnit -Name "ITEL"  -ProtectedFromAccidentalDeletion $false -Path "OU=Grado_Medio,DC=Andel,DC=local"
+
+New-ADOrganizationalUnit -Name "ASIR"  -ProtectedFromAccidentalDeletion $false -Path "OU=Grado_Superior,DC=Andel,DC=local"
+New-ADOrganizationalUnit -Name "EMC"   -ProtectedFromAccidentalDeletion $false -Path "OU=Grado_Superior,DC=Andel,DC=local"
+Start-Sleep -Seconds 1
+
+
+#Crear usuarios, grupos y meter a los usuarios en un grupo leyendo por fichero
+gc usuarios.txt | %{
+    New-aduser -name (($_).split(",")[0]) -sam (($_).split(",")[0]) -accountpassword (convertto-securestring "Andel_1928" -asplaintext -force) -enable $true
+    New-ADGroup -name (($_).split(",")[1]) -GroupScope Global 
+    Add-ADGroupMember (($_).split(",")[2]) -Members (($_).split(",")[0])
+}
+Start-Sleep -Seconds 1
+
+#Mover usuarios y grupos a cada OU correspondiente
+#Usuarios
+Move-ADObject "CN=pasero,CN=Users,DC=Andel,DC=local" -TargetPath "OU=itel,OU=Grado_Medio,DC=Andel,DC=local"
+Move-ADObject "CN=lucas,CN=Users,DC=Andel,DC=local" -TargetPath "OU=emc,OU=Grado_Superior,DC=Andel,DC=local"
+Move-ADObject "CN=almodovar,CN=Users,DC=Andel,DC=local" -TargetPath "OU=smir,OU=Grado_medio,DC=Andel,DC=local"
+Move-ADObject "CN=samu,CN=Users,DC=Andel,DC=local" -TargetPath "OU=asir,OU=Grado_Superior,DC=Andel,DC=local"
+
+Move-ADObject "CN=manuel,CN=Users,DC=Andel,DC=local" -TargetPath "OU=emc,OU=Grado_Superior,DC=Andel,DC=local"
+Move-ADObject "CN=kike,CN=Users,DC=Andel,DC=local" -TargetPath "OU=asir,OU=Grado_Superior,DC=Andel,DC=local"
+Move-ADObject "CN=cristian,CN=Users,DC=Andel,DC=local" -TargetPath "OU=smir,OU=Grado_Medio,DC=Andel,DC=local"
+Move-ADObject "CN=antonio,CN=Users,DC=Andel,DC=local" -TargetPath "OU=itel,OU=Grado_Medio,DC=Andel,DC=local"
+#Grupos
+Move-ADObject "CN=EMC,CN=users,DC=Andel,DC=local" -TargetPath "OU=emc,OU=Grado_Superior,DC=Andel,DC=local"
+Move-ADObject "CN=asir,CN=Users,DC=Andel,DC=local" -TargetPath "OU=asir,OU=Grado_Superior,DC=Andel,DC=local"
+Move-ADObject "CN=smir,CN=Users,DC=Andel,DC=local" -TargetPath "OU=smir,OU=Grado_Medio,DC=Andel,DC=local"
+Move-ADObject "CN=itel,CN=Users,DC=Andel,DC=local" -TargetPath "OU=itel,OU=Grado_Medio,DC=Andel,DC=local"
+
+Start-Sleep -Seconds 1
+
+##Deshabilitar los usuarios    
+$localusers = Get-LocalUser | Select Enabled,name
+foreach ($elemento in $localusers)
+{
+    if($localusers.Enabled -eq $true)
+       {
+       echo $localusers.name
+       Set-ADComputer -Identity $elemento.name -Enabled $False
+ }}
+      
+#Eliminar Unidades Organizativas 
+Remove-ADOrganizationalUnit -Identity "OU=Grado_Medio,DC=Andel,DC=local"  -Recursive 
+Remove-ADOrganizationalUnit -Identity "OU=Grado_Superior,DC=Andel,DC=local"  -Recursive 
+
+#Controlar cola de impresion de un equipo
+function cola_impresion 
+{
+$impresora = (Get-PrintJob "Generic / Text Only" |select username)
+$impresora.count
+        if($impresora.Count -gt 10){
+        echo "Demasiados ficheros para imprimir."
+        }
+        else{
+        echo "Puede imprimir."
+            }
+}
+
+cola_impresion 
+
+#Instalar paquete 
+$usuloc = gc usuarioslocales.txt
+
+function Usuarios
+{
+    Find-Package iexplorer | Install-Package
+}
+
+Usuarios
+´´´Powershell
